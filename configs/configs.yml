@@ -9,13 +9,17 @@ init_type: "kaiming_normal"
 
 
 # ->->->->-> Pruning <-<-<-<-<-
-k: 1.0
+k: 0.1
 
 # ->->->->-> Train <-<-<-<-<-
-trainer: "base"
-epochs: 100
+trainer: "adv"
+epochs: 20
 optimizer: "sgd"
 lr: 0.1
+# fine-tuning learning rate : lr = 0.01
+# pruning learning rate: lr = 0.1
+# pruning steps: 20
+# fine-tuning steps: 100
 lr_schedule: "cosine"
 wd: 0.0001
 momentum: 0.9
@@ -53,4 +57,4 @@ beta: 6.0
 # ->->->->-> Misc <-<-<-<-<-
 gpu: "0"
 seed: 1234
-print_freq: 100
+print_freq: 10

@@ -130,7 +130,7 @@ def main():
     D = data.__dict__[args.dataset](args, normalize=args.normalize)
     train_loader, test_loader = D.data_loaders()
 
-    logger.info(args.dataset, D, len(train_loader.dataset), len(test_loader.dataset))
+    logger.info(f"Dataset: {args.dataset}, D: {D}, num_train: {len(train_loader.dataset)}, num_test:{len(test_loader.dataset)}")
 
     # Semi-sup dataloader
     if args.is_semisup:
@@ -218,6 +218,7 @@ def main():
         last_ckpt = copy.deepcopy(model.state_dict())
 
     # Start training
+    start_time = time.time()
     for epoch in range(args.start_epoch, args.epochs + args.warmup_epochs):
         lr_policy(epoch)  # adjust learning rate
 
@@ -233,7 +234,6 @@ def main():
             args,
             writer,
         )
-
         # evaluate on test set
         if args.val_method == "smooth":
             prec1, radii = val(
@@ -284,6 +284,11 @@ def main():
         logger.info(
             f"Sanity check (exp-mode: {args.exp_mode}): Weight update - {sw}, Scores update - {ss}"
         )
+
+        print(f"Time since start of training: {float(time.time()-start_time)/60} minutes")
+
+    end_time = time.time()
+    print(f"Total training time: {end_time-start_time} seconds. These are {float((end_time-start_time)/3600)} hours")
 
     current_model_pruned_fraction(
         model, os.path.join(result_sub_dir, "checkpoint"), verbose=True
