@@ -203,8 +203,8 @@ def main():
 
     # Evaluate
     if args.evaluate or args.exp_mode in ["prune", "finetune"]:
-        p1, _ = val(model, device, test_loader, criterion, args, writer)
-        logger.info(f"Validation accuracy {args.val_method} for source-net: {p1}")
+        p1_bn, _, p1, _ = val(model, device, test_loader, criterion, args, writer)
+        logger.info(f"Benign validation accuracy {args.val_method} for source-net: {p1_bn}, Adversarial validation accuracy {args.val_method} for source-net: {p1}")
         if args.evaluate:
             return
 
@@ -243,7 +243,7 @@ def main():
         if args.val_method == "mixtrain" and epoch <= args.schedule_length:
             prec1 = 0.0
         else:
-            prec1, _ = val(model, device, test_loader, criterion, args, writer, epoch)
+            prec1_benign, _, prec1, _ = val(model, device, test_loader, criterion, args, writer, epoch)
 
         # remember best prec@1 and save checkpoint
         is_best = prec1 > best_prec1
@@ -263,7 +263,7 @@ def main():
         )
 
         logger.info(
-            f"Epoch {epoch}, val-method {args.val_method}, validation accuracy {prec1}, best_prec {best_prec1}"
+            f"Epoch {epoch}, val-method {args.val_method}, benign validation accuracy {prec1_benign}, adversarial validation accuracy {prec1}, best_prec {best_prec1}"
         )
         if args.exp_mode in ["prune", "finetune"]:
             logger.info(

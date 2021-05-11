@@ -183,7 +183,7 @@ def adv(model, device, val_loader, criterion, args, writer, epoch=0):
                 )
         progress.display(i)  # print final results
 
-    return adv_top1.avg, adv_top5.avg
+    return top1.avg, top5.avg, adv_top1.avg, adv_top5.avg
 
 
 def mixtrain(model, device, val_loader, criterion, args, writer, epoch=0):
