@@ -1,34 +1,29 @@
 # Some part borrowed from official tutorial https://github.com/pytorch/examples/blob/master/imagenet/main.py
-from __future__ import print_function
 from __future__ import absolute_import
+from __future__ import print_function
 
-import os
-import sys
-import numpy as np
-import argparse
-import importlib
-import time
-import logging
-from pathlib import Path
 import copy
+import csv
+import importlib
+import logging
+import os
+import time
+from pathlib import Path
 
+import numpy as np
 import torch
 import torch.nn as nn
-from torch.utils.data.dataset import Dataset
-from torchvision import datasets, transforms
 from torch.utils.tensorboard import SummaryWriter
 
-import models
 import data
+import models
 from args import parse_args
-from utils.schedules import get_lr_policy, get_optimizer
 from utils.logging import (
     save_checkpoint,
     create_subdirs,
     parse_configs_file,
     clone_results_to_latest_subdir,
 )
-from utils.semisup import get_semisup_dataloader
 from utils.model import (
     get_layers,
     prepare_model,
@@ -39,6 +34,8 @@ from utils.model import (
     sanity_check_paramter_updates,
     snip_init,
 )
+from utils.schedules import get_lr_policy, get_optimizer
+from utils.semisup import get_semisup_dataloader
 
 
 # TODO: update wrn, resnet models. Save both subnet and dense version.
@@ -130,7 +127,8 @@ def main():
     D = data.__dict__[args.dataset](args, normalize=args.normalize)
     train_loader, test_loader = D.data_loaders()
 
-    logger.info(f"Dataset: {args.dataset}, D: {D}, num_train: {len(train_loader.dataset)}, num_test:{len(test_loader.dataset)}")
+    logger.info(
+        f"Dataset: {args.dataset}, D: {D}, num_train: {len(train_loader.dataset)}, num_test:{len(test_loader.dataset)}")
 
     # Semi-sup dataloader
     if args.is_semisup:
@@ -203,8 +201,9 @@ def main():
 
     # Evaluate
     if args.evaluate or args.exp_mode in ["prune", "finetune"]:
-        p1_bn, _, p1, _ = val(model, device, test_loader, criterion, args, writer)
-        logger.info(f"Benign validation accuracy {args.val_method} for source-net: {p1_bn}, Adversarial validation accuracy {args.val_method} for source-net: {p1}")
+        p1_bn, _, p1, _, loss = val(model, device, test_loader, criterion, args, writer)
+        logger.info(
+            f"Benign validation accuracy {args.val_method} for source-net: {p1_bn}, Adversarial validation accuracy {args.val_method} for source-net: {p1}")
         if args.evaluate:
             return
 
@@ -217,6 +216,10 @@ def main():
     else:
         last_ckpt = copy.deepcopy(model.state_dict())
 
+    # Capture Loss, Benign & Adv Acc
+    losses = []
+    acc_ben = []
+    acc_adv = []
     # Start training
     start_time = time.time()
     for epoch in range(args.start_epoch, args.epochs + args.warmup_epochs):
@@ -243,7 +246,10 @@ def main():
         if args.val_method == "mixtrain" and epoch <= args.schedule_length:
             prec1 = 0.0
         else:
-            prec1_benign, _, prec1, _ = val(model, device, test_loader, criterion, args, writer, epoch)
+            prec1_benign, _, prec1, _, loss = val(model, device, test_loader, criterion, args, writer, epoch)
+            losses.append(loss)
+            acc_ben.append(prec1_benign)
+            acc_adv.append(prec1)
 
         # remember best prec@1 and save checkpoint
         is_best = prec1 > best_prec1
@@ -285,10 +291,21 @@ def main():
             f"Sanity check (exp-mode: {args.exp_mode}): Weight update - {sw}, Scores update - {ss}"
         )
 
-        print(f"Time since start of training: {float(time.time()-start_time)/60} minutes")
+        print(f"Time since start of training: {float(time.time() - start_time) / 60} minutes")
 
     end_time = time.time()
-    print(f"Total training time: {end_time-start_time} seconds. These are {float((end_time-start_time)/3600)} hours")
+    print(
+        f"Total training time: {end_time - start_time} seconds. These are {float((end_time - start_time) / 3600)} "
+        f"hours")
+
+    print("Writing results to csv file")
+    with open(os.path.join(Path("./csv_results"),
+                           f"{args.arch}-mode-{args.exp_mode}-k-{args.k}-lr-{args.lr}-lrschedule-{args.lr_schedule}"
+                           f"-weight.csv"),
+              "w", newline="") as file:
+        writer = csv.writer(file)
+        results = [losses, acc_ben, acc_adv]
+        writer.writerows(results)
 
     current_model_pruned_fraction(
         model, os.path.join(result_sub_dir, "checkpoint"), verbose=True
