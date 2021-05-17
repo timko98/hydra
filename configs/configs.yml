@@ -17,10 +17,10 @@ epochs: 20
 optimizer: "sgd"
 lr: 0.1
 # fine-tuning learning rate : lr = 0.01
-# pruning learning rate: lr = 0.1
+# pruning & pretrain learning rate: lr = 0.1
 # pruning steps: 20
 # fine-tuning steps: 100
-lr_schedule: "cosine"
+lr_schedule: "step"
 wd: 0.0001
 momentum: 0.9
 #warmup
@@ -29,7 +29,7 @@ warmup_lr: 0.1
 
 
 # ->->->->-> Eval <-<-<-<-<-
-val_method: base
+val_method: adv
 
 
 # ->->->->-> Dataset <-<-<-<-<-

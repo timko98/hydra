@@ -8,6 +8,7 @@ import importlib
 import logging
 import os
 import time
+from itertools import zip_longest
 from pathlib import Path
 
 import numpy as np
@@ -201,7 +202,7 @@ def main():
 
     # Evaluate
     if args.evaluate or args.exp_mode in ["prune", "finetune"]:
-        p1_bn, _, p1, _, loss = val(model, device, test_loader, criterion, args, writer)
+        p1_bn, _, p1, _, loss, adv_loss = val(model, device, test_loader, criterion, args, writer)
         logger.info(
             f"Benign validation accuracy {args.val_method} for source-net: {p1_bn}, Adversarial validation accuracy {args.val_method} for source-net: {p1}")
         if args.evaluate:
@@ -216,8 +217,9 @@ def main():
     else:
         last_ckpt = copy.deepcopy(model.state_dict())
 
-    # Capture Loss, Benign & Adv Acc
+    # Capture Loss, Adv Loss, Benign Acc & Adv Acc
     losses = []
+    adv_losses = []
     acc_ben = []
     acc_adv = []
     # Start training
@@ -246,10 +248,12 @@ def main():
         if args.val_method == "mixtrain" and epoch <= args.schedule_length:
             prec1 = 0.0
         else:
-            prec1_benign, _, prec1, _, loss = val(model, device, test_loader, criterion, args, writer, epoch)
-            losses.append(loss)
-            acc_ben.append(prec1_benign)
-            acc_adv.append(prec1)
+            prec1_benign, _, prec1, _, loss, adv_loss = val(model, device, test_loader, criterion, args, writer, epoch)
+            losses.append(loss.item())
+            print(f"Loss: {loss.item()}")
+            adv_losses.append(adv_loss.item())
+            acc_ben.append(prec1_benign.item())
+            acc_adv.append(prec1.item())
 
         # remember best prec@1 and save checkpoint
         is_best = prec1 > best_prec1
@@ -304,7 +308,8 @@ def main():
                            f"-weight.csv"),
               "w", newline="") as file:
         writer = csv.writer(file)
-        results = [losses, acc_ben, acc_adv]
+        results = [losses, adv_losses, acc_ben, acc_adv]
+        results = zip_longest(*results, fillvalue='')
         writer.writerows(results)
 
     current_model_pruned_fraction(
