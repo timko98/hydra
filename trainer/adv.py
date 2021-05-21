@@ -6,7 +6,8 @@ import torchvision
 
 from utils.logging import AverageMeter, ProgressMeter
 from utils.eval import accuracy
-from utils.adv import trades_loss
+from utils.adv import trades_loss, pgd_loss
+
 
 # TODO: add adversarial accuracy.
 def train(
@@ -54,7 +55,7 @@ def train(
         output = model(images)
 
         # calculate robust loss
-        loss = trades_loss(
+        loss = pgd_loss(
             model=model,
             x_natural=images,
             y=target,

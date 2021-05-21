@@ -249,9 +249,8 @@ def main():
             prec1 = 0.0
         else:
             prec1_benign, _, prec1, _, loss, adv_loss = val(model, device, test_loader, criterion, args, writer, epoch)
-            losses.append(loss.item())
-            print(f"Loss: {loss.item()}")
-            adv_losses.append(adv_loss.item())
+            losses.append(loss)
+            adv_losses.append(adv_loss)
             acc_ben.append(prec1_benign.item())
             acc_adv.append(prec1.item())
 

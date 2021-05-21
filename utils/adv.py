@@ -186,6 +186,49 @@ def trades_loss_hot_vector(
     loss = loss_natural + beta * loss_robust
     return loss
 
+def pgd_loss(
+    model,
+    x_natural,
+    y,
+    device,
+    optimizer,
+    step_size,
+    epsilon,
+    perturb_steps,
+    beta,
+    clip_min,
+    clip_max,
+    distance="l_inf",
+    natural_criterion=nn.CrossEntropyLoss(),
+):
+    model.eval()
+    # generate adversarial example
+    x_adv = (
+        x_natural.detach() + 0.001 * torch.randn(x_natural.shape).to(device).detach()
+    )
+    if distance == "l_inf":
+        for _ in range(perturb_steps):
+            x_adv.requires_grad_()
+            with torch.enable_grad():
+                loss_kl = natural_criterion(F.softmax(model(x_adv), dim=1), y)
+            grad = torch.autograd.grad(loss_kl, [x_adv])[0]
+            x_adv = x_adv.detach() + step_size * torch.sign(grad.detach())
+            x_adv = torch.min(
+                torch.max(x_adv, x_natural - epsilon), x_natural + epsilon
+            )
+            x_adv = torch.clamp(x_adv, clip_min, clip_max)
+    else:
+        x_adv = torch.clamp(x_adv, clip_min, clip_max)
+
+    model.train()
+    x_adv = Variable(torch.clamp(x_adv, clip_min, clip_max), requires_grad=False)
+    # zero gradient
+    optimizer.zero_grad()
+    # calculate robust loss
+    logits = model(x_adv)
+    loss_pgd = natural_criterion(logits, y)
+    return loss_pgd
+
 
 # TODO: support L-2 attacks too.
 def pgd_whitebox(
