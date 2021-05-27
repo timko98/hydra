@@ -13,7 +13,7 @@ class GetSubnet(autograd.Function):
     @staticmethod
     def forward(ctx, scores, k):
         # Get the subnetwork by sorting the scores and using the top k%
-        # """ Weight pruning
+        """ Weight pruning
         out = scores.clone()
         _, idx = scores.flatten().sort()
         j = int((1 - k) * scores.numel())
@@ -22,14 +22,20 @@ class GetSubnet(autograd.Function):
         flat_out = out.flatten()
         flat_out[idx[:j]] = 0
         flat_out[idx[j:]] = 1
-        # """
-        """ Channel pruning
+        """
+        """ Channel pruning without changed score mask
         out = scores.clone()
         kept_weights = torch.topk(torch.linalg.norm(out.reshape(out.shape[0], -1), 1, dim=1),
                                   int(k * out.shape[0])).indices
         out[:] = 0
         out[kept_weights] = 1
         """
+        # """ Channel pruning with changed score mask
+        out = scores.clone()
+        kept_weights = torch.topk(out, k=int(k*out.shape[0]), dim=0).indices
+        out[:] = 0
+        out[kept_weights] = 1
+        # """
         return out
 
     @staticmethod
@@ -64,7 +70,10 @@ class SubnetConv(nn.Conv2d):
             groups,
             bias,
         )
-        self.popup_scores = Parameter(torch.Tensor(self.weight.shape))
+        # Weight pruning
+        # self.popup_scores = Parameter(torch.Tensor(self.weight.shape))
+        # Channel Pruning
+        self.popup_scores = Parameter(torch.Tensor(torch.Size([self.weight.shape[0],1,1,1])))
         nn.init.kaiming_uniform_(self.popup_scores, a=math.sqrt(5))
 
         self.weight.requires_grad = False
@@ -118,7 +127,10 @@ class SubnetLinear(nn.Linear):
 
     def __init__(self, in_features, out_features, bias=True):
         super(SubnetLinear, self).__init__(in_features, out_features, bias=True)
-        self.popup_scores = Parameter(torch.Tensor(self.weight.shape))
+        # Weight pruning
+        # self.popup_scores = Parameter(torch.Tensor(self.weight.shape))
+        # Channel Pruning
+        self.popup_scores = Parameter(torch.Tensor(torch.Size([self.weight.shape[0], 1])))
         nn.init.kaiming_uniform_(self.popup_scores, a=math.sqrt(5))
         self.weight.requires_grad = False
         self.bias.requires_grad = False
