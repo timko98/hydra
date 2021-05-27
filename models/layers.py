@@ -110,7 +110,10 @@ class SubnetConv(nn.Conv2d):
             f"filters kept.")
         """
         # Get the subnetwork by sorting the scores.
-        adj = GetSubnet.apply(self.popup_scores.abs(), self.k)
+        if self.weight.shape == torch.Size([64,3,3,3]):
+            adj = GetSubnet.apply(self.popup_scores.abs(), 1)
+        else:
+            adj = GetSubnet.apply(self.popup_scores.abs(), self.k)
 
         # Use only the subnetwork in the forward pass.
         self.w = self.weight * adj
