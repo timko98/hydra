@@ -113,10 +113,25 @@ def initialize_scaled_score(model):
     for m in model.modules():
         if hasattr(m, "popup_scores"):
             n = nn.init._calculate_correct_fan(m.popup_scores, "fan_in")
+            # Weight Pruning
+            """
             # Close to kaiming unifrom init
             m.popup_scores.data = (
-                math.sqrt(6 / n) * m.weight.data / torch.max(torch.abs(m.weight.data))
+                    math.sqrt(6 / n) * m.weight.data / torch.max(torch.abs(m.weight.data))
             )
+            """
+            # Channel Prune
+            # """
+            reshaped_weights = torch.sum(torch.abs(m.weight.data.reshape(m.weight.data.shape[1],-1)),dim=1)
+            if type(m) == SubnetConv:
+                channel_popup_scores = (math.sqrt(6/n)*reshaped_weights / torch.max(torch.abs(reshaped_weights))).reshape(1,m.weight.data.shape[1],1,1)
+            else:
+                channel_popup_scores = (
+                        math.sqrt(6 / n) * reshaped_weights / torch.max(torch.abs(reshaped_weights))).reshape(
+                    1, m.weight.data.shape[1])
+            m.popup_scores.data = channel_popup_scores
+            # """
+
 
 
 def scale_rand_init(model, k):

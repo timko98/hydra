@@ -7,6 +7,8 @@ import torch.nn.functional as F
 from torch.nn.parameter import Parameter
 import numpy as np
 
+conv_nr = 0
+linear_nr = 0
 
 # https://github.com/allenai/hidden-networks
 class GetSubnet(autograd.Function):
@@ -32,9 +34,11 @@ class GetSubnet(autograd.Function):
         """
         # """ Channel pruning with changed score mask
         out = scores.clone()
-        kept_weights = torch.topk(out, k=int(k*out.shape[0]), dim=0).indices
+        kept_weights = torch.topk(out, k=int(k*out.shape[1]), dim=1).indices
+        out = torch.transpose(out, 0,1)
         out[:] = 0
         out[kept_weights] = 1
+        out = torch.transpose(out, 0,1)
         # """
         return out
 
@@ -71,9 +75,9 @@ class SubnetConv(nn.Conv2d):
             bias,
         )
         # Weight pruning
-        # self.popup_scores = Parameter(torch.Tensor(self.weight.shape))
+        self.popup_scores = Parameter(torch.Tensor(self.weight.shape))
         # Channel Pruning
-        self.popup_scores = Parameter(torch.Tensor(torch.Size([self.weight.shape[0],1,1,1])))
+        # self.popup_scores = Parameter(torch.Tensor(torch.Size([1,self.weight.shape[1],1,1])))
         nn.init.kaiming_uniform_(self.popup_scores, a=math.sqrt(5))
 
         self.weight.requires_grad = False
@@ -109,11 +113,16 @@ class SubnetConv(nn.Conv2d):
             f"{num_remaining_filters}. These are {float(num_remaining_filters / remaining_filters)} percent of the "
             f"filters kept.")
         """
-        # Get the subnetwork by sorting the scores.
-        if self.weight.shape == torch.Size([64,3,3,3]):
-            adj = GetSubnet.apply(self.popup_scores.abs(), 1)
+        global conv_nr
+        if conv_nr == 13:
+            conv_nr = 1
         else:
-            adj = GetSubnet.apply(self.popup_scores.abs(), self.k)
+            conv_nr += 1
+        # Get the subnetwork by sorting the scores.
+        mask_conv_50 = [1.0, 1.0, 0.984375, 1.0, 1.0, 0.98828125, 0.98046875, 1.0, 0.96875, 0.359375, 0.099609375, 0.1015625, 0.099609375]
+        mask_conv_10 = [1.0, 0.5, 0.46875, 0.4921875, 0.484375, 0.4765625, 0.5, 0.5, 0.48242188, 0.05078125, 0.0234375, 0.015625, 0.015625]
+        k = mask_conv_10[conv_nr-1]
+        adj = GetSubnet.apply(self.popup_scores.abs(), k)
 
         # Use only the subnetwork in the forward pass.
         self.w = self.weight * adj
@@ -131,9 +140,10 @@ class SubnetLinear(nn.Linear):
     def __init__(self, in_features, out_features, bias=True):
         super(SubnetLinear, self).__init__(in_features, out_features, bias=True)
         # Weight pruning
-        # self.popup_scores = Parameter(torch.Tensor(self.weight.shape))
+        self.popup_scores = Parameter(torch.Tensor(self.weight.shape))
         # Channel Pruning
-        self.popup_scores = Parameter(torch.Tensor(torch.Size([self.weight.shape[0], 1])))
+        # self.popup_scores = Parameter(torch.Tensor(torch.Size([1, self.weight.shape[1]])))
+
         nn.init.kaiming_uniform_(self.popup_scores, a=math.sqrt(5))
         self.weight.requires_grad = False
         self.bias.requires_grad = False
@@ -168,8 +178,16 @@ class SubnetLinear(nn.Linear):
             f"{num_remaining_filters}. These are {float(num_remaining_filters / remaining_filters)} percent of the "
             f"filters kept.")
         """
+        global linear_nr
+        if linear_nr == 3:
+            linear_nr = 1
+        else:
+            linear_nr += 1
         # Get the subnetwork by sorting the scores.
-        adj = GetSubnet.apply(self.popup_scores.abs(), self.k)
+        mask_linear_50 = [0.10107422, 0.1015625, 0.1015625]
+        mask_linear_10 = [0.016601562, 0.015625, 0.015625]
+        k = mask_linear_10[linear_nr-1]
+        adj = GetSubnet.apply(self.popup_scores.abs(), k)
 
         # Use only the subnetwork in the forward pass.
         self.w = self.weight * adj

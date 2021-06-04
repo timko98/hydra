@@ -211,7 +211,7 @@ def pgd_loss(
         for _ in range(perturb_steps):
             x_adv.requires_grad_()
             with torch.enable_grad():
-                loss_kl = natural_criterion(model(x_adv), y)
+                loss_kl = F.cross_entropy(model(x_adv), y, size_average=False)
             grad = torch.autograd.grad(loss_kl, [x_adv])[0]
             x_adv = x_adv.detach() + step_size * torch.sign(grad.detach())
             x_adv = torch.min(
