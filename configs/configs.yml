@@ -1,5 +1,5 @@
 # ->->->->-> Primary <-<-<-<-<-
-arch: "vgg16_bn"
+arch: "wrn_28_4"
 exp_name: "temp"
 result_dir: "./trained_models"
 num_classes: 10

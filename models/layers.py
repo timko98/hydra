@@ -75,9 +75,12 @@ class SubnetConv(nn.Conv2d):
             bias,
         )
         # Weight pruning
-        self.popup_scores = Parameter(torch.Tensor(self.weight.shape))
-        # Channel Pruning
+        # self.popup_scores = Parameter(torch.Tensor(self.weight.shape))
+        # Channel Finetuning or Resume Pruning
         # self.popup_scores = Parameter(torch.Tensor(torch.Size([1,self.weight.shape[1],1,1])))
+        # Channel Pruning
+        self.popup_scores = Parameter(torch.Tensor(torch.Size([self.weight.shape[0], 1,1,1])))
+
         nn.init.kaiming_uniform_(self.popup_scores, a=math.sqrt(5))
 
         self.weight.requires_grad = False
@@ -113,6 +116,7 @@ class SubnetConv(nn.Conv2d):
             f"{num_remaining_filters}. These are {float(num_remaining_filters / remaining_filters)} percent of the "
             f"filters kept.")
         """
+        """ Channel Prune VGG16
         global conv_nr
         if conv_nr == 13:
             conv_nr = 1
@@ -122,7 +126,27 @@ class SubnetConv(nn.Conv2d):
         mask_conv_50 = [1.0, 1.0, 0.984375, 1.0, 1.0, 0.98828125, 0.98046875, 1.0, 0.96875, 0.359375, 0.099609375, 0.1015625, 0.099609375]
         mask_conv_10 = [1.0, 0.5, 0.46875, 0.4921875, 0.484375, 0.4765625, 0.5, 0.5, 0.48242188, 0.05078125, 0.0234375, 0.015625, 0.015625]
         k = mask_conv_10[conv_nr-1]
+        if conv_nr == 1:
+            adj = GetSubnet.apply(self.popup_scores.abs(), 1)
+        else:
+            adj = GetSubnet.apply(self.popup_scores.abs(), self.k)
+        """
+        global conv_nr
+        if conv_nr == 28:
+            conv_nr = 1
+        else:
+            conv_nr += 1
+        """
+        mask_wrn_50 = [1, 0.5, 0.171875, 0.5, 0.5625, 0.5, 0.359375, 0.40625, 0.375, 0.1875, 0.390625, 0.4453125, 0.390625, 0.328125, 0.171875, 0.4765625, 0.3046875, 0.140625, 0.2265625,0.640625, 0.49609375, 0.640625, 0.6015625, 0.6796875, 0.46875, 0.52734375, 0.50390625, 0.48825125]
+        # Add mask for 0.1 Channel pruning here
+        mask_wrn_10 = None
+        k = mask_wrn_50[conv_nr-1]
         adj = GetSubnet.apply(self.popup_scores.abs(), k)
+        """
+        if conv_nr == 1:
+            adj = GetSubnet.apply(self.popup_scores.abs(), 1)
+        else:
+            adj = GetSubnet.apply(self.popup_scores.abs(), self.k)
 
         # Use only the subnetwork in the forward pass.
         self.w = self.weight * adj
@@ -140,9 +164,11 @@ class SubnetLinear(nn.Linear):
     def __init__(self, in_features, out_features, bias=True):
         super(SubnetLinear, self).__init__(in_features, out_features, bias=True)
         # Weight pruning
-        self.popup_scores = Parameter(torch.Tensor(self.weight.shape))
+        # self.popup_scores = Parameter(torch.Tensor(self.weight.shape))
+        # Channel Finetuning or Resume Pruning
+        # self.popup_scores = Parameter(torch.Tensor(torch.Size([1,self.weight.shape[1]])))
         # Channel Pruning
-        # self.popup_scores = Parameter(torch.Tensor(torch.Size([1, self.weight.shape[1]])))
+        self.popup_scores = Parameter(torch.Tensor(torch.Size([self.weight.shape[0],1])))
 
         nn.init.kaiming_uniform_(self.popup_scores, a=math.sqrt(5))
         self.weight.requires_grad = False
@@ -178,6 +204,7 @@ class SubnetLinear(nn.Linear):
             f"{num_remaining_filters}. These are {float(num_remaining_filters / remaining_filters)} percent of the "
             f"filters kept.")
         """
+        """ Channel Prune VGG16
         global linear_nr
         if linear_nr == 3:
             linear_nr = 1
@@ -187,7 +214,11 @@ class SubnetLinear(nn.Linear):
         mask_linear_50 = [0.10107422, 0.1015625, 0.1015625]
         mask_linear_10 = [0.016601562, 0.015625, 0.015625]
         k = mask_linear_10[linear_nr-1]
-        adj = GetSubnet.apply(self.popup_scores.abs(), k)
+        adj = GetSubnet.apply(self.popup_scores.abs(), self.k)
+        """
+        # Fixed mask WRN Channel Prune
+        # adj = GetSubnet.apply(self.popup_scores.abs(), 0.44140625)
+        adj = GetSubnet.apply(self.popup_scores.abs(), self.k)
 
         # Use only the subnetwork in the forward pass.
         self.w = self.weight * adj
