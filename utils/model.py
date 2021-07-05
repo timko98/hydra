@@ -230,6 +230,8 @@ def current_model_pruned_fraction(model, result_dir, verbose=True):
     path = os.path.join(result_dir, "checkpoint_dense.pth.tar")
 
     pl = []
+    zero_weights = 0
+    total_params = 0
 
     if os.path.exists(path):
         state_dict = torch.load(path, map_location="cpu")["state_dict"]
@@ -237,12 +239,17 @@ def current_model_pruned_fraction(model, result_dir, verbose=True):
             if isinstance(v, (nn.Conv2d, nn.Linear)):
                 if i + ".weight" in state_dict.keys():
                     d = state_dict[i + ".weight"].data.cpu().numpy()
+                    """
                     p = 100 * np.sum(d == 0) / np.size(d)
                     pl.append(p)
-                    if verbose:
-                        print(i, v, p)
-        return np.mean(pl)
-
+                    """
+                    zero_weights += np.sum(d==0)
+                    total_params += np.size(d)
+                    # if verbose:
+                    #     print(i, v, p)
+        # return np.mean(pl)
+        return (float(zero_weights)/float(total_params))*100.
+        
 
 def sanity_check_paramter_updates(model, last_ckpt):
     """

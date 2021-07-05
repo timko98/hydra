@@ -125,29 +125,36 @@ class SubnetConv(nn.Conv2d):
         # Get the subnetwork by sorting the scores.
         mask_conv_50 = [1.0, 1.0, 0.984375, 1.0, 1.0, 0.98828125, 0.98046875, 1.0, 0.96875, 0.359375, 0.099609375, 0.1015625, 0.099609375]
         mask_conv_10 = [1.0, 0.5, 0.46875, 0.4921875, 0.484375, 0.4765625, 0.5, 0.5, 0.48242188, 0.05078125, 0.0234375, 0.015625, 0.015625]
-        k = mask_conv_10[conv_nr-1]
+        mask_conv_10_new = [1.0, 0.75, 0.640625, 0.703125, 0.671875, 0.14453125, 0.01171875, 0.01171875, 0.01171875, 0.009765625, 0.009765625, 0.009765625, 0.009765625] 
+        k = mask_conv_10_new[conv_nr-1]
+        adj = GetSubnet.apply(self.popup_scores.abs(), k)
+        """
+        """
         if conv_nr == 1:
             adj = GetSubnet.apply(self.popup_scores.abs(), 1)
         else:
             adj = GetSubnet.apply(self.popup_scores.abs(), self.k)
         """
+        # """ WRN-28-4
         global conv_nr
         if conv_nr == 28:
             conv_nr = 1
         else:
             conv_nr += 1
         """
+        """
         mask_wrn_50 = [1, 0.5, 0.171875, 0.5, 0.5625, 0.5, 0.359375, 0.40625, 0.375, 0.1875, 0.390625, 0.4453125, 0.390625, 0.328125, 0.171875, 0.4765625, 0.3046875, 0.140625, 0.2265625,0.640625, 0.49609375, 0.640625, 0.6015625, 0.6796875, 0.46875, 0.52734375, 0.50390625, 0.48825125]
+        mask_wrn_10 = [1.0, 0.0625, 0.078125, 0.09375, 0.046875, 0.109375, 0.046875, 0.0625, 0.0625, 0.0625, 0.203125, 0.0703125, 0.1796875, 0.0234375, 0.09375, 0.1953125, 0.1796875, 0.1796875, 0.3359375, 0.20703125, 0.015625, 0.015625, 0.015625, 0.015625, 0.015625, 0.2890625]
         # Add mask for 0.1 Channel pruning here
-        mask_wrn_10 = None
         k = mask_wrn_50[conv_nr-1]
         adj = GetSubnet.apply(self.popup_scores.abs(), k)
+        """
         """
         if conv_nr == 1:
             adj = GetSubnet.apply(self.popup_scores.abs(), 1)
         else:
             adj = GetSubnet.apply(self.popup_scores.abs(), self.k)
-
+        # """
         # Use only the subnetwork in the forward pass.
         self.w = self.weight * adj
         x = F.conv2d(
@@ -204,7 +211,7 @@ class SubnetLinear(nn.Linear):
             f"{num_remaining_filters}. These are {float(num_remaining_filters / remaining_filters)} percent of the "
             f"filters kept.")
         """
-        """ Channel Prune VGG16
+        # """ Channel Prune VGG16
         global linear_nr
         if linear_nr == 3:
             linear_nr = 1
@@ -213,12 +220,16 @@ class SubnetLinear(nn.Linear):
         # Get the subnetwork by sorting the scores.
         mask_linear_50 = [0.10107422, 0.1015625, 0.1015625]
         mask_linear_10 = [0.016601562, 0.015625, 0.015625]
-        k = mask_linear_10[linear_nr-1]
-        adj = GetSubnet.apply(self.popup_scores.abs(), self.k)
-        """
-        # Fixed mask WRN Channel Prune
+        mask_linear_10_new = [0.010253906, 0.01171875, 0.01171875]
+        
+        k = mask_linear_10_new[linear_nr-1]
+        adj = GetSubnet.apply(self.popup_scores.abs(), k)
+        # """
+        # Fixed mask WRN Channel Prune 0.5
         # adj = GetSubnet.apply(self.popup_scores.abs(), 0.44140625)
-        adj = GetSubnet.apply(self.popup_scores.abs(), self.k)
+        # Fixed mas WRN Channel Prune 0.1 --> still missing
+        # adj = GetSubnet.apply(self.popup_scores.abs(), None)
+        # adj = GetSubnet.apply(self.popup_scores.abs(), self.k)
 
         # Use only the subnetwork in the forward pass.
         self.w = self.weight * adj

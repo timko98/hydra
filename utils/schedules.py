@@ -73,8 +73,8 @@ def step_schedule(optimizer, args):
             a = args.warmup_lr
         else:
             epoch = epoch - args.warmup_epochs
-
-        a = lr
+            a = lr
+            
         if epoch >= 0.75 * epochs:
             a = lr * 0.1
         if epoch >= 0.9 * epochs:
