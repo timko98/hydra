@@ -134,21 +134,33 @@ class SubnetConv(nn.Conv2d):
             adj = GetSubnet.apply(self.popup_scores.abs(), 1)
         else:
             adj = GetSubnet.apply(self.popup_scores.abs(), self.k)
-        """
-        # """ WRN-28-4
+        # """
+        # """ Resnet18 Weight Pruning
+        global conv_nr
+        if conv_nr == 20:
+            conv_nr = 1
+        else:
+            conv_nr += 1
+
+        if conv_nr == 1:
+            adj = GetSubnet.apply(self.popup_scores.abs(), 1)
+        else:
+            adj = GetSubnet.apply(self.popup_scores.abs(), self.k)
+        # """
+        """ WRN-28-4
         global conv_nr
         if conv_nr == 28:
             conv_nr = 1
         else:
             conv_nr += 1
-        # """
-        # """
+        """
+        """
         mask_wrn_50 = [1, 0.5, 0.171875, 0.5, 0.5625, 0.5, 0.359375, 0.40625, 0.375, 0.1875, 0.390625, 0.4453125, 0.390625, 0.328125, 0.171875, 0.4765625, 0.3046875, 0.140625, 0.2265625,0.640625, 0.49609375, 0.640625, 0.6015625, 0.6796875, 0.46875, 0.52734375, 0.50390625, 0.48825125]
         mask_wrn_10 = [1.0, 0.0625, 0.078125, 0.0625, 0.09375, 0.046875, 0.109375, 0.046875, 0.0625, 0.0625, 0.0625, 0.203125, 0.0625, 0.0703125, 0.1796875, 0.0234375, 0.09375, 0.1953125, 0.1796875, 0.3359375, 0.3359375, 0.1796875, 0.20703125, 0.015625, 0.015625, 0.015625, 0.015625, 0.015625]
         # Add mask for 0.1 Channel pruning here
         k = mask_wrn_10[conv_nr-1]
         adj = GetSubnet.apply(self.popup_scores.abs(), k)
-        #  """
+        """
         """
         if conv_nr == 1:
             adj = GetSubnet.apply(self.popup_scores.abs(), 1)
@@ -228,9 +240,9 @@ class SubnetLinear(nn.Linear):
         # Fixed mask WRN Channel Prune 0.5
         # adj = GetSubnet.apply(self.popup_scores.abs(), 0.44140625)
         # Fixed mas WRN Channel Prune 0.1
-        adj = GetSubnet.apply(self.popup_scores.abs(), 0.2890625)
+        # adj = GetSubnet.apply(self.popup_scores.abs(), 0.2890625)
         # adj = GetSubnet.apply(self.popup_scores.abs(), None)
-        # adj = GetSubnet.apply(self.popup_scores.abs(), self.k)
+        adj = GetSubnet.apply(self.popup_scores.abs(), self.k)
 
         # Use only the subnetwork in the forward pass.
         self.w = self.weight * adj

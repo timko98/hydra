@@ -153,7 +153,17 @@ def main():
         if os.path.isfile(args.source_net):
             logger.info("=> loading source model from '{}'".format(args.source_net))
             checkpoint = torch.load(args.source_net, map_location=device)
-            model.load_state_dict(checkpoint["state_dict"])
+            model_dict = model.state_dict()
+            if args.arch == "resnet18" and args.exp_mode == 'prune':
+                checkpoint_dict = checkpoint['net']
+            else:
+                checkpoint_dict = checkpoint['state_dict']
+            if args.exp_mode == 'prune':
+                checkpoint_dict = {k.replace("module.basic_model.", ""): v for k, v in checkpoint_dict.items() if k.find('popup_scores') == -1}
+                model_dict.update(checkpoint_dict)
+                model.load_state_dict(model_dict)
+            else:
+                model.load_state_dict(checkpoint_dict)
             logger.info("=> loaded checkpoint '{}'".format(args.source_net))
         else:
             logger.info("=> no checkpoint found at '{}'".format(args.resume))
@@ -212,7 +222,7 @@ def main():
 
     show_gradients(model)
 
-    if args.source_net:
+    if args.source_net and not args.arch == "resnet18":
         last_ckpt = checkpoint["state_dict"]
     else:
         last_ckpt = copy.deepcopy(model.state_dict())
