@@ -304,7 +304,7 @@ def main():
     print("Writing results to csv file")
     with open(os.path.join(Path("./csv_results"),
                            f"{args.arch}-mode-{args.exp_mode}-k-{args.k}-lr-{args.lr}-lrschedule-{args.lr_schedule}"
-                           f"-channel-pgd_fixed_mask.csv"),
+                           f"-channel-pgd_fixed_mask_pretrained_qi.csv"),
               "w", newline="") as file:
         writer = csv.writer(file)
         results = [losses, adv_losses, acc_ben, acc_adv]
