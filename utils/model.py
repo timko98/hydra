@@ -117,7 +117,7 @@ def initialize_scaled_score(model):
             """
             # Close to kaiming unifrom init
             m.popup_scores.data = (
-                    math.sqrt(6 / n) * m.weight.data / torch.max(torch.abs(m.weight.data))
+                math.sqrt(6 / n) * m.weight.data / torch.max(torch.abs(m.weight.data))
             )
             """
             # Channel Prune

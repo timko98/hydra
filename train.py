@@ -154,11 +154,14 @@ def main():
             logger.info("=> loading source model from '{}'".format(args.source_net))
             checkpoint = torch.load(args.source_net, map_location=device)
             model_dict = model.state_dict()
-            if args.arch == "resnet18" and args.exp_mode == 'prune':
+            """
+            if (args.arch == "resnet18" or args.arch == "ResNet18") and args.exp_mode == 'prune':
                 checkpoint_dict = checkpoint['net']
             else:
                 checkpoint_dict = checkpoint['state_dict']
-            if args.exp_mode == 'prune':
+            """
+            checkpoint_dict = checkpoint['state_dict']
+            if args.exp_mode == 'prune' or args.evaluate:
                 checkpoint_dict = {k.replace("module.basic_model.", ""): v for k, v in checkpoint_dict.items() if k.find('popup_scores') == -1}
                 model_dict.update(checkpoint_dict)
                 model.load_state_dict(model_dict)
@@ -314,7 +317,7 @@ def main():
     print("Writing results to csv file")
     with open(os.path.join(Path("./csv_results"),
                            f"{args.arch}-mode-{args.exp_mode}-k-{args.k}-lr-{args.lr}-lrschedule-{args.lr_schedule}"
-                           f"-channel-pgd_fixed_mask_pretrained_qi.csv"),
+                           f"-filter-pgd-all-layers.csv"),
               "w", newline="") as file:
         writer = csv.writer(file)
         results = [losses, adv_losses, acc_ben, acc_adv]

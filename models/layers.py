@@ -27,6 +27,7 @@ class GetSubnet(autograd.Function):
         """
         """ Channel pruning without changed score mask
         out = scores.clone()
+        print(scores.shape)
         kept_weights = torch.topk(torch.linalg.norm(out.reshape(out.shape[0], -1), 1, dim=1),
                                   int(k * out.shape[0])).indices
         out[:] = 0
@@ -74,12 +75,12 @@ class SubnetConv(nn.Conv2d):
             groups,
             bias,
         )
-        # Weight pruning
+        # Weight pruning or Filter Pruning
         # self.popup_scores = Parameter(torch.Tensor(self.weight.shape))
         # Channel Finetuning or Resume Pruning
-        self.popup_scores = Parameter(torch.Tensor(torch.Size([1,self.weight.shape[1],1,1])))
+        # self.popup_scores = Parameter(torch.Tensor(torch.Size([1,self.weight.shape[1],1,1])))
         # Channel Pruning
-        # self.popup_scores = Parameter(torch.Tensor(torch.Size([self.weight.shape[0], 1,1,1])))
+        self.popup_scores = Parameter(torch.Tensor(torch.Size([self.weight.shape[0], 1,1,1])))
 
         nn.init.kaiming_uniform_(self.popup_scores, a=math.sqrt(5))
 
@@ -127,25 +128,34 @@ class SubnetConv(nn.Conv2d):
         mask_conv_10 = [1.0, 0.5, 0.46875, 0.4921875, 0.484375, 0.4765625, 0.5, 0.5, 0.48242188, 0.05078125, 0.0234375, 0.015625, 0.015625]
         mask_conv_10_new = [1.0, 0.75, 0.640625, 0.703125, 0.671875, 0.14453125, 0.01171875, 0.01171875, 0.01171875, 0.009765625, 0.009765625, 0.009765625, 0.009765625] 
         k = mask_conv_10_new[conv_nr-1]
-        adj = GetSubnet.apply(self.popup_scores.abs(), k)
+        # adj = GetSubnet.apply(self.popup_scores.abs(), k)
         """
         """
         if conv_nr == 1:
             adj = GetSubnet.apply(self.popup_scores.abs(), 1)
         else:
             adj = GetSubnet.apply(self.popup_scores.abs(), self.k)
-        # """
-        # """ Resnet18 Weight Pruning
+        """
+        """ Resnet18 Channel Pruning
         global conv_nr
         if conv_nr == 20:
             conv_nr = 1
         else:
             conv_nr += 1
-
+            
+        mask_resnet_50 = [1, 0.5, 0.671875, 0.609375, 0.46875, 0.609375, 0.53125, 0.609375, 0.5390625, 0.5546875, 0.5859375, 0.49609375, 0.5859375, 0.62890625, 0.578125, 0.6015625, 0.57617185, 0.6015625, 0.48828125, 0.48632812]
+        mask_resnet_10 = [1, 0.203125, 0.46875, 0.34375, 0.4375, 0.390625, 0.203125, 0.390625, 0.1640625, 0.25, 0.1796875, 0.203125, 0.1796875, 0.109375, 0.0859375, 0.0859375, 0.05078125, 0.0859375, 0.08984375, 0.05078125]
+        k = mask_resnet_50[conv_nr-1]
+        adj = GetSubnet.apply(self.popup_scores.abs(), k)
+        """
+        """ Resnet18 Channel Pruning all layers same
         if conv_nr == 1:
             adj = GetSubnet.apply(self.popup_scores.abs(), 1)
         else:
             adj = GetSubnet.apply(self.popup_scores.abs(), self.k)
+        """
+        #""" Resnet18 Filter Pruning or Channel Pruning standard
+        # adj = GetSubnet.apply(self.popup_scores.abs(), self.k)
         # """
         """ WRN-28-4
         global conv_nr
@@ -167,7 +177,10 @@ class SubnetConv(nn.Conv2d):
         else:
             adj = GetSubnet.apply(self.popup_scores.abs(), self.k)
         # """
+        # Weight Pruning
+        # adj = GetSubnet.apply(self.popup_scores.abs(), self.k)
         # Use only the subnetwork in the forward pass.
+        adj = GetSubnet.apply(self.popup_scores.abs(), self.k)
         self.w = self.weight * adj
         x = F.conv2d(
             x, self.w, self.bias, self.stride, self.padding, self.dilation, self.groups
@@ -185,9 +198,9 @@ class SubnetLinear(nn.Linear):
         # Weight pruning
         # self.popup_scores = Parameter(torch.Tensor(self.weight.shape))
         # Channel Finetuning or Resume Pruning
-        self.popup_scores = Parameter(torch.Tensor(torch.Size([1,self.weight.shape[1]])))
+        # self.popup_scores = Parameter(torch.Tensor(torch.Size([1,self.weight.shape[1]])))
         # Channel Pruning
-        # self.popup_scores = Parameter(torch.Tensor(torch.Size([self.weight.shape[0],1])))
+        self.popup_scores = Parameter(torch.Tensor(torch.Size([self.weight.shape[0],1])))
 
         nn.init.kaiming_uniform_(self.popup_scores, a=math.sqrt(5))
         self.weight.requires_grad = False
@@ -241,8 +254,14 @@ class SubnetLinear(nn.Linear):
         # adj = GetSubnet.apply(self.popup_scores.abs(), 0.44140625)
         # Fixed mas WRN Channel Prune 0.1
         # adj = GetSubnet.apply(self.popup_scores.abs(), 0.2890625)
-        # adj = GetSubnet.apply(self.popup_scores.abs(), None)
+        # resnet 18 channel prune 0.5 mask
+        # adj = GetSubnet.apply(self.popup_scores.abs(), 0.22460938)
+        # resnet 18 channel prune 0.1 mask
+        # adj = GetSubnet.apply(self.popup_scores.abs(), 0.05078125)
+        # resnet 18 filter pruning or channel pruning without first/last layer skipped
         adj = GetSubnet.apply(self.popup_scores.abs(), self.k)
+        # all layers same channel pruning
+        # adj = GetSubnet.apply(self.popup_scores.abs(), self.k)
 
         # Use only the subnetwork in the forward pass.
         self.w = self.weight * adj
