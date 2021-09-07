@@ -117,25 +117,25 @@ class SubnetConv(nn.Conv2d):
             f"{num_remaining_filters}. These are {float(num_remaining_filters / remaining_filters)} percent of the "
             f"filters kept.")
         """
-        """ Channel Prune VGG16
+        # """ Channel Prune VGG16
         global conv_nr
         if conv_nr == 13:
             conv_nr = 1
         else:
             conv_nr += 1
         # Get the subnetwork by sorting the scores.
-        mask_conv_50 = [1.0, 1.0, 0.984375, 1.0, 1.0, 0.98828125, 0.98046875, 1.0, 0.96875, 0.359375, 0.099609375, 0.1015625, 0.099609375]
-        mask_conv_10 = [1.0, 0.5, 0.46875, 0.4921875, 0.484375, 0.4765625, 0.5, 0.5, 0.48242188, 0.05078125, 0.0234375, 0.015625, 0.015625]
-        mask_conv_10_new = [1.0, 0.75, 0.640625, 0.703125, 0.671875, 0.14453125, 0.01171875, 0.01171875, 0.01171875, 0.009765625, 0.009765625, 0.009765625, 0.009765625] 
-        k = mask_conv_10_new[conv_nr-1]
+        # mask_conv_50 = [1.0, 1.0, 0.984375, 1.0, 1.0, 0.98828125, 0.98046875, 1.0, 0.96875, 0.359375, 0.099609375, 0.1015625, 0.099609375]
+        # mask_conv_10 = [1.0, 0.5, 0.46875, 0.4921875, 0.484375, 0.4765625, 0.5, 0.5, 0.48242188, 0.05078125, 0.0234375, 0.015625, 0.015625]
+        # mask_conv_10_new = [1.0, 0.75, 0.640625, 0.703125, 0.671875, 0.14453125, 0.01171875, 0.01171875, 0.01171875, 0.009765625, 0.009765625, 0.009765625, 0.009765625] 
+        # k = mask_conv_10_new[conv_nr-1]
         # adj = GetSubnet.apply(self.popup_scores.abs(), k)
-        """
-        """
+        # """
+        # """
         if conv_nr == 1:
             adj = GetSubnet.apply(self.popup_scores.abs(), 1)
         else:
             adj = GetSubnet.apply(self.popup_scores.abs(), self.k)
-        """
+        # """
         """ Resnet18 Channel Pruning
         global conv_nr
         if conv_nr == 20:
@@ -177,7 +177,7 @@ class SubnetConv(nn.Conv2d):
         # Weight Pruning
         # adj = GetSubnet.apply(self.popup_scores.abs(), self.k)
         # Use only the subnetwork in the forward pass.
-        adj = GetSubnet.apply(self.popup_scores.abs(), self.k)
+        # adj = GetSubnet.apply(self.popup_scores.abs(), self.k)
         self.w = self.weight * adj
         x = F.conv2d(
             x, self.w, self.bias, self.stride, self.padding, self.dilation, self.groups
