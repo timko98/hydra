@@ -143,8 +143,8 @@ class SubnetConv(nn.Conv2d):
         else:
             conv_nr += 1
             
-        mask_resnet_50 = [1, 0.5, 0.671875, 0.609375, 0.46875, 0.609375, 0.53125, 0.609375, 0.5390625, 0.5546875, 0.5859375, 0.49609375, 0.5859375, 0.62890625, 0.578125, 0.6015625, 0.57617185, 0.6015625, 0.48828125, 0.48632812]
-        mask_resnet_10 = [1, 0.203125, 0.46875, 0.34375, 0.4375, 0.390625, 0.203125, 0.390625, 0.1640625, 0.25, 0.1796875, 0.203125, 0.1796875, 0.109375, 0.0859375, 0.0859375, 0.05078125, 0.0859375, 0.08984375, 0.05078125]
+        mask_resnet_50 = [1, 1, 1, 1, 1, 0.96875, 0.8671875, 0.96875, 1, 0.9453125, 0.8359375, 0.3203125,0.8359375, 1, 0.578125, 0.828125, 0.2109375, 0.828125, 0.6328125, 0.25]
+        mask_resnet_10 = [1, 0.125, 0.15625, 0.125, 0.125, 0.046875, 0.1640625, 0.046875, 0.1171875, 0.0546875, 0.1953125, 0.1171875, 0.1953125, 0.13671875, 0.13671875, 0.17578125, 0.068359375, 0.17578125, 0.068359375, 0.12109375]
         k = mask_resnet_50[conv_nr-1]
         adj = GetSubnet.apply(self.popup_scores.abs(), k)
         """
@@ -154,9 +154,6 @@ class SubnetConv(nn.Conv2d):
         else:
             adj = GetSubnet.apply(self.popup_scores.abs(), self.k)
         """
-        #""" Resnet18 Filter Pruning or Channel Pruning standard
-        # adj = GetSubnet.apply(self.popup_scores.abs(), self.k)
-        # """
         """ WRN-28-4
         global conv_nr
         if conv_nr == 28:
@@ -255,13 +252,13 @@ class SubnetLinear(nn.Linear):
         # Fixed mas WRN Channel Prune 0.1
         # adj = GetSubnet.apply(self.popup_scores.abs(), 0.2890625)
         # resnet 18 channel prune 0.5 mask
-        # adj = GetSubnet.apply(self.popup_scores.abs(), 0.22460938)
+        # adj = GetSubnet.apply(self.popup_scores.abs(), 0.69140625)
         # resnet 18 channel prune 0.1 mask
-        # adj = GetSubnet.apply(self.popup_scores.abs(), 0.05078125)
+        # adj = GetSubnet.apply(self.popup_scores.abs(), 0.056640625)
         # resnet 18 filter pruning or channel pruning without first/last layer skipped
-        adj = GetSubnet.apply(self.popup_scores.abs(), self.k)
-        # all layers same channel pruning
         # adj = GetSubnet.apply(self.popup_scores.abs(), self.k)
+        # all layers same channel pruning
+        adj = GetSubnet.apply(self.popup_scores.abs(), self.k)
 
         # Use only the subnetwork in the forward pass.
         self.w = self.weight * adj
