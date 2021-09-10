@@ -15,7 +15,7 @@ class GetSubnet(autograd.Function):
     @staticmethod
     def forward(ctx, scores, k):
         # Get the subnetwork by sorting the scores and using the top k%
-        """ Weight pruning
+        # """ Weight pruning
         out = scores.clone()
         _, idx = scores.flatten().sort()
         j = int((1 - k) * scores.numel())
@@ -24,7 +24,7 @@ class GetSubnet(autograd.Function):
         flat_out = out.flatten()
         flat_out[idx[:j]] = 0
         flat_out[idx[j:]] = 1
-        """
+        # """
         """ Channel pruning without changed score mask
         out = scores.clone()
         print(scores.shape)
@@ -33,14 +33,14 @@ class GetSubnet(autograd.Function):
         out[:] = 0
         out[kept_weights] = 1
         """
-        # """ Channel pruning with changed score mask
+        """ Channel pruning with changed score mask
         out = scores.clone()
         kept_weights = torch.topk(out, k=int(k*out.shape[1]), dim=1).indices
         out = torch.transpose(out, 0,1)
         out[:] = 0
         out[kept_weights] = 1
         out = torch.transpose(out, 0,1)
-        # """
+        """
         return out
 
     @staticmethod
@@ -76,11 +76,11 @@ class SubnetConv(nn.Conv2d):
             bias,
         )
         # Weight pruning or Filter Pruning
-        # self.popup_scores = Parameter(torch.Tensor(self.weight.shape))
+        self.popup_scores = Parameter(torch.Tensor(self.weight.shape))
         # Channel Finetuning or Resume Pruning
         # self.popup_scores = Parameter(torch.Tensor(torch.Size([1,self.weight.shape[1],1,1])))
         # Channel Pruning
-        self.popup_scores = Parameter(torch.Tensor(torch.Size([self.weight.shape[0], 1,1,1])))
+        # self.popup_scores = Parameter(torch.Tensor(torch.Size([self.weight.shape[0], 1,1,1])))
 
         nn.init.kaiming_uniform_(self.popup_scores, a=math.sqrt(5))
 
@@ -117,19 +117,34 @@ class SubnetConv(nn.Conv2d):
             f"{num_remaining_filters}. These are {float(num_remaining_filters / remaining_filters)} percent of the "
             f"filters kept.")
         """
-        """ Channel Prune VGG16
+        # """ Channel Prune VGG16 / WEight Prune VGG with HARP Mask
         global conv_nr
         if conv_nr == 13:
             conv_nr = 1
         else:
             conv_nr += 1
-        # Get the subnetwork by sorting the scores.
-        mask_conv_50 = [1.0, 1.0, 0.984375, 1.0, 1.0, 0.98828125, 0.98046875, 1.0, 0.96875, 0.359375, 0.099609375, 0.1015625, 0.099609375]
-        mask_conv_10 = [1.0, 0.5, 0.46875, 0.4921875, 0.484375, 0.4765625, 0.5, 0.5, 0.48242188, 0.05078125, 0.0234375, 0.015625, 0.015625]
-        mask_conv_10_new = [1.0, 0.75, 0.640625, 0.703125, 0.671875, 0.14453125, 0.01171875, 0.01171875, 0.01171875, 0.009765625, 0.009765625, 0.009765625, 0.009765625] 
-        k = mask_conv_10_new[conv_nr-1]
-        # adj = GetSubnet.apply(self.popup_scores.abs(), k)
+        # """
+        """ ResNet Weight pruning with HARP mask
+        global conv_nr
+        if conv_nr == 20:
+            conv_nr = 1
+        else:
+            conv_nr += 1
         """
+        # """
+        # Get the subnetwork by sorting the scores.
+        # mask_conv_50 = [1.0, 1.0, 0.984375, 1.0, 1.0, 0.98828125, 0.98046875, 1.0, 0.96875, 0.359375, 0.099609375, 0.1015625, 0.099609375]
+        # mask_conv_10 = [1.0, 0.5, 0.46875, 0.4921875, 0.484375, 0.4765625, 0.5, 0.5, 0.48242188, 0.05078125, 0.0234375, 0.015625, 0.015625]
+        # mask_conv_10_new = [1.0, 0.75, 0.640625, 0.703125, 0.671875, 0.14453125, 0.01171875, 0.01171875, 0.01171875, 0.009765625, 0.009765625, 0.009765625, 0.009765625] 
+        
+        # TODO Add weight pruning mask
+        mask_conv_50_weight_vgg = []
+        mask_conv_10_weight_vgg = []
+        mask_conv_50_weight_resnet = []
+        mask_conv_10_weight_resnet = []
+        k = mask_conv_50_weight_vgg[conv_nr-1]
+        adj = GetSubnet.apply(self.popup_scores.abs(), k)
+        # """
         """
         if conv_nr == 1:
             adj = GetSubnet.apply(self.popup_scores.abs(), 1)
@@ -177,7 +192,7 @@ class SubnetConv(nn.Conv2d):
         # Weight Pruning
         # adj = GetSubnet.apply(self.popup_scores.abs(), self.k)
         # Use only the subnetwork in the forward pass.
-        adj = GetSubnet.apply(self.popup_scores.abs(), self.k)
+        # adj = GetSubnet.apply(self.popup_scores.abs(), self.k)
         self.w = self.weight * adj
         x = F.conv2d(
             x, self.w, self.bias, self.stride, self.padding, self.dilation, self.groups
@@ -233,19 +248,27 @@ class SubnetLinear(nn.Linear):
             f"{num_remaining_filters}. These are {float(num_remaining_filters / remaining_filters)} percent of the "
             f"filters kept.")
         """
-        """ Channel Prune VGG16
+        # """ Channel Prune VGG16 / Weight Pruning VGG
         global linear_nr
         if linear_nr == 3:
             linear_nr = 1
         else:
             linear_nr += 1
+    
         # Get the subnetwork by sorting the scores.
-        mask_linear_50 = [0.10107422, 0.1015625, 0.1015625]
-        mask_linear_10 = [0.016601562, 0.015625, 0.015625]
-        mask_linear_10_new = [0.010253906, 0.01171875, 0.01171875]
+        # mask_linear_50 = [0.10107422, 0.1015625, 0.1015625]
+        # mask_linear_10 = [0.016601562, 0.015625, 0.015625]
+        # mask_linear_10_new = [0.010253906, 0.01171875, 0.01171875]
         
-        k = mask_linear_10_new[linear_nr-1]
+        mask_linear_50_weight_vgg = []
+        mask_linearv_10_weight_vgg = []
+        k = mask_linear_50_weight_vgg[conv_nr-1]
         adj = GetSubnet.apply(self.popup_scores.abs(), k)
+        # """
+        """ Weight pruning ResNet-18 (only 1 FC layer therefore we do not need any counting)
+        # TODO Add pruning rate
+        fc_pruning_rate_resnet = 0
+        adj = GetSubnet.apply(self.popup_scores.abs(), fc_pruning_rate_resnet)
         """
         # Fixed mask WRN Channel Prune 0.5
         # adj = GetSubnet.apply(self.popup_scores.abs(), 0.44140625)
@@ -258,7 +281,7 @@ class SubnetLinear(nn.Linear):
         # resnet 18 filter pruning or channel pruning without first/last layer skipped
         # adj = GetSubnet.apply(self.popup_scores.abs(), self.k)
         # all layers same channel pruning
-        adj = GetSubnet.apply(self.popup_scores.abs(), self.k)
+        # adj = GetSubnet.apply(self.popup_scores.abs(), self.k)
 
         # Use only the subnetwork in the forward pass.
         self.w = self.weight * adj
