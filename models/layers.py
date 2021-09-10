@@ -138,11 +138,11 @@ class SubnetConv(nn.Conv2d):
         # mask_conv_10_new = [1.0, 0.75, 0.640625, 0.703125, 0.671875, 0.14453125, 0.01171875, 0.01171875, 0.01171875, 0.009765625, 0.009765625, 0.009765625, 0.009765625] 
         
         # TODO Add weight pruning mask
-        mask_conv_50_weight_vgg = []
-        mask_conv_10_weight_vgg = []
-        mask_conv_50_weight_resnet = []
-        mask_conv_10_weight_resnet = []
-        k = mask_conv_50_weight_vgg[conv_nr-1]
+        mask_conv_10_weight_vgg = [0.7054398, 0.7999946, 0.7241482, 0.7109375, 0.5362176, 0.21506923, 0.25430298, 0.12902577, 0.0725051, 0.02571106, 0.03643036, 0.056192186, 0.083146416]
+        mask_conv_1_weight_vgg = [0.088541664, 0.099989146, 0.10000271, 0.0986735, 0.09999932, 0.027399698, 0.011052449, 0.005391439, 0.0027152167, 0.001121521, 0.008400387, 0.007597605, 0.001463996]
+        mask_conv_10_weight_resnet = [0.13020833, 0.53149414, 0.5145671, 0.17355686, 0.5435384, 0.37270778, 0.5004883, 0.18046062, 0.06576877, 0.67685276, 0.1789449, 0.44311523, 0.20067003, 0.17880079, 0.06928507, 0.21734364, 0.43701935, 0.034864213, 0.021808624, 0.025060866]
+        mask_conv_1_weight_resnet = [0.19791667, 0.19675022, 0.10877821, 0.13669163, 0.1907552, 0.113091365, 0.16638184, 0.13044569, 0.039605036, 0.004998101, 0.005001492, 0.005004883, 0.0049997964, 0.0049997964, 0.0049997964, 0.0049997964, 0.0049972534, 0.0050002206, 0.0049997964, 0.0050002206]
+        k = mask_conv_10_weight_vgg[conv_nr-1]
         adj = GetSubnet.apply(self.popup_scores.abs(), k)
         # """
         """
@@ -260,14 +260,15 @@ class SubnetLinear(nn.Linear):
         # mask_linear_10 = [0.016601562, 0.015625, 0.015625]
         # mask_linear_10_new = [0.010253906, 0.01171875, 0.01171875]
         
-        mask_linear_50_weight_vgg = []
-        mask_linearv_10_weight_vgg = []
-        k = mask_linear_50_weight_vgg[conv_nr-1]
+        mask_linear_10_weight_vgg = [0.13480186, 0.10757446, 0.1390625]
+        mask_linear_1_weight_vgg = [0.004491806, 0.011795044, 0.009375]
+        k = mask_linear_10_weight_vgg[conv_nr-1]
         adj = GetSubnet.apply(self.popup_scores.abs(), k)
         # """
         """ Weight pruning ResNet-18 (only 1 FC layer therefore we do not need any counting)
         # TODO Add pruning rate
-        fc_pruning_rate_resnet = 0
+        fc_pruning_rate_resnet_10 = 0.44472656
+        fc_pruning_rate_resnet_1 = 0.005078125
         adj = GetSubnet.apply(self.popup_scores.abs(), fc_pruning_rate_resnet)
         """
         # Fixed mask WRN Channel Prune 0.5
